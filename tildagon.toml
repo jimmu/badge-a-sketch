@@ -1,0 +1,14 @@
+[app]
+name = "Echt-A-Sketch"
+category = "Badge"
+wifi_preference = false
+
+[entry]
+class = "EchtASketch"
+
+[metadata]
+author = "Jimmu"
+license	= "MIT"
+url = "https://github.com/todo/todo"
+description = "Drawing program. Shake upside down to erase."
+version = "0.1"
