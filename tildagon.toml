@@ -9,6 +9,6 @@ class = "EchtASketch"
 [metadata]
 author = "Jimmu"
 license	= "MIT"
-url = "https://github.com/todo/todo"
-description = "Drawing program. Shake upside down to erase."
+url = "https://github.com/jimmu/badge-a-sketch/"
+description = "Frustrating drawing tool. Shake upside down to erase."
 version = "0.1"
