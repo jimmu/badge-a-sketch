@@ -1,6 +1,7 @@
 from tildagonos import tildagonos, led_colours
 import imu
 import app
+import math
 from events.input import Buttons, BUTTON_TYPES
 from app_components import Notification, clear_background
 
@@ -13,8 +14,10 @@ MIN_SPEED = 1
 MAX_SPEED = 5
 ACCELERATION = 0.5
 SHAKES_TO_CLEAR = 10
+X = 0
 Y = 1
 Z = 2
+TILT_CORRECTION_DAMPING = 6
 
 class EchtASketch(app.App):
     def __init__(self):
@@ -27,6 +30,7 @@ class EchtASketch(app.App):
         self.speed = MIN_SPEED
         self.etching = True
         self.notification = Notification("Shake upside down to clear")
+        self.angle = 0
 
     def update(self, delta):
         if self.notification:
@@ -128,6 +132,8 @@ class EchtASketch(app.App):
 
     def draw(self, ctx):
         ctx.save()
+        # Rotate to keep the picture level
+        self.compensate_for_tilt(ctx)
         # Clear the background
         ctx.rgb(*BACKGROUND_COLOUR)
         ctx.rectangle(-SCREEN_RADIUS, -SCREEN_RADIUS, SCREEN_RADIUS*2, SCREEN_RADIUS*2).fill()
@@ -146,6 +152,35 @@ class EchtASketch(app.App):
         ctx.rectangle(self.overlays[-1].end[0], self.overlays[-1].end[1], 1, 1)
         ctx.stroke()
         ctx.restore()
+
+    def compensate_for_tilt(self, ctx):
+        accel = imu.acc_read()
+        x = accel[X]
+        y = accel[Y]
+        z = accel[Z]
+        # When the badge is lying flat, stop trying to do this stuff.
+        if (z < 8):
+            angleNow = 0
+            if (x == 0):
+                # Avoid division by zero
+                if (y > 0):
+                    angleNow = math.pi/2
+                else:
+                    angleNow = -math.pi/2
+            else:
+                angleNow = math.atan(y/x)
+
+            if (x < 0):
+                # Angle is in the third/fourth quadrants
+                if (y > 0):
+                    angleNow = math.pi + angleNow
+                else:
+                    angleNow = -math.pi + angleNow
+
+            # We don't want the thing to be jittery, so apply some smoothing
+            self.angle = (angleNow + ((TILT_CORRECTION_DAMPING-1) * self.angle))/TILT_CORRECTION_DAMPING
+
+        ctx.rotate(-self.angle)
 
 class LineSegment():
     def __init__(self, start_coords, end_coords, colour):
