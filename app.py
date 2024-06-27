@@ -1,7 +1,9 @@
 from tildagonos import tildagonos, led_colours
+import os
 import imu
 import app
 import math
+import json
 from events.input import Buttons, BUTTON_TYPES
 from app_components import Notification, clear_background
 
@@ -17,7 +19,7 @@ SHAKES_TO_CLEAR = 10
 X = 0
 Y = 1
 Z = 2
-TILT_CORRECTION_DAMPING = 6
+TILT_CORRECTION_DAMPING = 5
 
 class EchtASketch(app.App):
     def __init__(self):
@@ -31,6 +33,45 @@ class EchtASketch(app.App):
         self.etching = True
         self.notification = Notification("Shake upside down to clear")
         self.angle = 0
+        self.load_picture_data()
+
+    def to_text(self):
+        pointArray = [x.to_text() for x in self.overlays]
+        return ":".join(pointArray)
+
+    def load_picture_data(self):
+        if (self.file_exists("/data/echtasketch/picture")):
+            with open("/data/echtasketch/picture", "r") as f:
+                asText = f.read()
+                # We have a colon separated list of start-end coords.
+                coordsList = asText.split(":")
+                # Now for each coord, create a line segment
+                for coord in coordsList:
+                    thisLine = LineSegment((0,0), (0,0), LINE_COLOUR)
+                    thisLine.from_text(coord)
+                    self.overlays.append(thisLine)
+
+
+    def save_picture_data(self):
+        if (not self.dir_exists("/data")):
+            os.mkdir("/data")
+        if (not self.dir_exists("/data/echtasketch")):
+            os.mkdir("/data/echtasketch")
+
+        with open("/data/echtasketch/picture", "w") as f: 
+            f.write(self.to_text())   
+ 
+    def dir_exists(self, filename):
+        try:
+            return (os.stat(filename)[0] & 0x4000) != 0
+        except OSError:
+            return False
+            
+    def file_exists(self, filename):
+        try:
+            return (os.stat(filename)[0] & 0x4000) == 0
+        except OSError:
+            return False
 
     def update(self, delta):
         if self.notification:
@@ -45,6 +86,7 @@ class EchtASketch(app.App):
             if self.notification :
                 self.notification = None
             else:
+                self.save_picture_data()
                 self.minimise()
             
         if (self.state == "RightWayUp"):
@@ -199,5 +241,16 @@ class LineSegment():
 
     def set_colour(self, colour):
         self.colour = colour
+
+    def to_text(self):
+        # Return the coordinates of the start and end points, separated by commas.
+        # Also the RGB components of the line colour
+        return ",".join(str(x) for x in self.start + self.end + self.colour)
+
+    def from_text(self, asText):
+        inParts = asText.split(",")
+        self.start = (float(inParts[0]), float(inParts[1]))
+        self.end = (float(inParts[2]), float(inParts[3]))
+        self.colour = (float(inParts[4]), float(inParts[5]), float(inParts[6]))
 
 __app_export__ = EchtASketch
